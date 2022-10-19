@@ -2,94 +2,6 @@ from curses import reset_shell_mode
 from telethon import client
 from config import *
 
-class TextVerifiedApi:
-
-    def __init__(self) -> None:
-        self.api_key = API_KEY
-
-
-    def authentication(self):
-        headers = {
-            'X-SIMPLE-API-ACCESS-TOKEN': self.api_key
-        }
-        req = requests.post(
-            "https://www.textverified.com/api/simpleauthentication",
-            headers=headers
-        ).json()
-        self.access_token = req['bearer_token']
-        return self.access_token
-
-    def fetch_number(self):
-        headers = {
-            'Authorization': f'Bearer {self.access_token}'
-        }
-        params = {
-            "id": 69 # for telegram
-        }
-        req = requests.post(
-            "https://www.textverified.com/api/verifications",
-            json=params,
-            headers=headers
-        )
-        result = req.json()
-
-        if isinstance(result, str) == True:
-            print(f'Error - {result}')
-            return False
-        else:
-            self.verify_id = result['id']
-            return result
-
-
-
-    def fetch_code(self):
-        code = None
-        while code is None:
-            print("Waiting for code....")
-            headers = {
-                'Authorization': f'Bearer {self.access_token}'
-            }
-            req = requests.get(
-                f"https://www.textverified.com/api/verifications/{self.verify_id}",
-                headers=headers
-            )
-            result = req.json()
-            code = result['code']
-            time.sleep(5)
-        return code
-
-
-    def fetch_verifications(self):
-        headers = {
-            'Authorization': f'Bearer {self.access_token}'
-        }
-        req = requests.get(
-            "https://www.textverified.com/api/verifications/pending",
-            headers=headers
-        )
-        result = req.json()
-        return result[0]
-
-
-    def close_verification(self, id:str):
-        headers = {
-            'Authorization': f'Bearer {self.access_token}'
-        }
-        req = requests.put(
-            f"https://www.textverified.com/api/verifications/{id}/report",
-            headers=headers
-        )
-        result = req.json()
-        return result
-
-
-    def check_balance(self):
-        pass
-
-    def get_deposit_wallet(self):
-        pass
-
-
 class TelegramApi:
 
     def __init__(self) -> None:
@@ -132,7 +44,8 @@ class TelegramApi:
 
         # print(session)
         self.client = TelegramClient(StringSession(session), API_ID, API_HASH, loop=self.loop).start()
-        print(self.client.loop.run_until_complete(self.client.get_me()))
+        user = self.client.loop.run_until_complete(self.client.get_me())
+        print(f"Signed In As {user.first_name} ({user.id})")
 
     @property
     def session(self):
@@ -193,71 +106,61 @@ class TelegramApi:
         return data
 
 
-    def create_account(self, name):
+
+    def add_account(self):
         "Verifies A New User Account"
-        # fetch number
-        TV_api = TextVerifiedApi()
-        TV_api.authentication()
-        result = TV_api.fetch_number()
-
-        if result is False:
-            pending = TV_api.fetch_verifications()
-            TV_api.close_verification(pending['id'])
-            result = TV_api.fetch_number()
-            
-        number = result['number']
-
-        #send code
-        self.client.start(
-            phone=f"+1{number}",
-            force_sms=True,
-            code_callback=TV_api.fetch_code,
-            first_name=name, # NEW ACCOUNT NAME
-            last_name="Carter"
-        )
         session = self.session
         self.write_to_json(session)
-
-        self.add_about()
 
         return {
             "session" : session
         }
 
 
-    async def send_messages(self, target:str):
+    async def send_messages(self, target:str, start:int):
         "Fetch Participants from group to an array"
         try:
             group = await self.client.get_entity(target)
-            entity = await self.client.get_participants(
-                    group
-                )
+            # entity = [ print(e) async for e in self.client.iter_participants(target) ]
+            # print(len(entity))
             # self.client.loop.run_until_complete(
             #     asyncio.sleep(0.5)
             # )
             await asyncio.sleep(2)
             await self.client(JoinChannelRequest(group))
 
-            for each in entity:
-                await asyncio.sleep(2)
+            index = 0
 
-                user = await self.client.get_entity(each.id)
-                self.receivers.append(each.id)
-                
-                # # import pdb; pdb.set_trace()
-                # await self.client.send_file(each.id, f"{cwd}/nyoki.jpg")
-                
-                
-                
-                for msg in data['message']:
-                    if each.username != None:
-                        text = msg.replace("$USERNAME", each.username)
-                    else:
-                        text = msg.replace("$USERNAME", "")
-                    
+            async for each in self.client.iter_participants(target):
 
-                    await self.client.send_message(user.id, text)
-                    await asyncio.sleep(2)
+                # await asyncio.sleep(2)
+                if start > index:
+                    index += 1
+                    pass
+                else:
+
+                    user = await self.client.get_entity(each.id)
+
+                    if each.id not in self.receivers:
+                        self.receivers.append(each.id)
+                        
+                        # # import pdb; pdb.set_trace()
+                        # await self.client.send_file(each.id, f"{cwd}/nyoki.jpg")
+                        
+                        
+                        
+                        for msg in data['message']:
+                            if each.username != None:
+                                text = msg.replace("$USERNAME", each.username)
+                            else:
+                                text = msg.replace("$USERNAME", "")
+                            
+
+                            await self.client.send_message(user.id, text)
+                            print(f"Sent To - {user.first_name}")
+                            await asyncio.sleep(0.5)
+                        else:
+                            pass
                     
         except Exception as e:
             print(e)
@@ -304,32 +207,3 @@ class TelegramApi:
         print(".....")
         self.client.run_until_disconnected()
 
-
-
-
-
-
-def write_to_MongoDb(user, session):
-    "Write Session Data To Database"
-    # Send Session To DB
-    exists = client['tool_database']['sessions'].find({
-        'SessionString': session
-    })
-    data = [e for e in exists]
-    print(data)
-
-    if len(data) != 0:
-        return ""
-    else:
-        post_data = {
-            'id': user.id,
-            'Owner': user.username,
-            'FirstName': user.first_name,
-            'Phone': user.phone,
-            'SessionString': session,
-            'AccessHash': user.access_hash,
-            'Active': True
-        }
-        result = client['tool_database']['sessions'].insert_one(post_data)
-        # import pdb; pdb.set_trace()
-        return result.inserted_id

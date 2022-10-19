@@ -10,7 +10,13 @@ def get_session(session):
         sessions.remove(session)
 
     return sessions[0] #picks the first recorded
-    # return random.choice(sessions)
+    # return random.choice(sessions)\
+
+def get_sessions():
+    file = open(f'{cwd}/data.json')
+    data = json.load(file)
+    sessions = data['sessions']
+    return sessions
 
 def run():
     "Start The Script"
@@ -22,11 +28,10 @@ def run():
         print("Welcome, Let's get started for the day.")
         print("""
         Here are the commands;
-        - Press (1) to create a new account
+        - Press (1) to add a new account to registry
         - Press (2) to send out messages and await response
         - Press (3) to exit the application
         - Press (4) to check SpamBot
-        - Press (5) to add user to MongoDB
 
         Watch the console closely, as any action would have an identifier here!
         """)
@@ -34,33 +39,32 @@ def run():
         response = input(">>")
 
         if response == "1":
-            name = input("Input a name for this new account?")
 
-            api_client.start
-            res = api_client.create_account(name)
-            session = res['session']
+            api_client.sign_in("")
+            api_client.add_account()
             api_client.stop
 
-            api_client.add_about()
-
-            # print(session)
-            print(res)
-            print("Created A New Account Succcessfully 👍")
+            print("New Account Added Succcessfully 👍")
 
 
         elif response == "2":
             targetGroup = input("Input your target group invite link? ")
 
             used = 0
-            session = get_session(session)
 
-            print(f"Accounts Already Used To Send Text Blast - {used}")
+            all_sessions = get_sessions()
+            for each in all_sessions:
+                session = each
 
-            api_client.sign_in(session)
-            api_client.client.loop.run_until_complete(
-                api_client.send_messages(targetGroup)
-            )
-            api_client.stop
+
+                print(f"Activating Account {used + 1}")
+
+                api_client.sign_in(each)
+                api_client.client.loop.run_until_complete(
+                    api_client.send_messages(targetGroup, start=used*50)
+                )
+                api_client.stop
+                used += 1
 
             # print("Waiting on response......")
             # api_client.run()
@@ -82,20 +86,6 @@ def run():
 
             print("Waiting on response......")
             api_client.run()
-
-
-        elif response == "5":
-
-            session = get_session(session)
-
-            api_client.sign_in(session)
-
-            user_data = api_client.get_user_data()
-            # print(user_data)
-
-            res = write_to_MongoDb(user_data, session)
-
-            print(f"Session Sent to Database Successfully - {res}")
 
 
         else:
