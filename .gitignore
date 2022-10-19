@@ -1,5 +1,13 @@
+from os import environ
+
+
 ./env
 env
 deploy.sh
 .vscode
 .history
+
+
+env
+./environ
+.env
