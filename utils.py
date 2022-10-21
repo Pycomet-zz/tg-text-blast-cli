@@ -65,6 +65,32 @@ class TelegramApi:
         with open(f'{cwd}/data.json', 'w') as json_file:
             json.dump(data, json_file, indent=4)
 
+    def check_receiver(self, user_id:int) -> bool:
+        "Checks the receivers file if user_id exists"
+        file = open(f'{cwd}/users.json')
+        data = json.load(file)
+
+        #check user_id
+        for user in data["users"]:
+            if user == user_id:
+                return True
+            else:
+                pass
+        return False
+
+    def update_receivers(self):
+        "Update the users.json file with newly sent message user Ids"
+        file = open(f'{cwd}/users.json')
+        data = json.load(file)
+
+        for each in self.receivers:
+            data["users"].append(each)
+
+        with open(f'{cwd}/users.json', 'w') as json_file:
+            json.dump(data, json_file, indent=4)
+
+
+
     def add_about(self):
         "Add Bio & User Picture to new Account"
         # Add proxy
@@ -116,6 +142,8 @@ class TelegramApi:
             "session" : session
         }
 
+    
+
 
     async def send_messages(self, target:str, start:int):
         "Fetch Participants from group to an array"
@@ -141,7 +169,9 @@ class TelegramApi:
 
                     user = await self.client.get_entity(each.id)
 
-                    if each.id not in self.receivers:
+                    isExisting = self.check_receiver(each.id)
+
+                    if each.id not in self.receivers and isExisting == False:
                         self.receivers.append(each.id)
                         
                         # # import pdb; pdb.set_trace()
@@ -150,17 +180,26 @@ class TelegramApi:
                         
                         
                         for msg in data['message']:
-                            if each.username != None:
-                                text = msg.replace("$USERNAME", each.username)
-                            else:
-                                text = msg.replace("$USERNAME", "")
-                            
 
-                            await self.client.send_message(user.id, text)
-                            print(f"Sent To - {user.first_name}")
-                            await asyncio.sleep(0.5)
+                            # Write User Filter In Condition
+                            if each.bot == False and str(each.status) == "UserStatusRecently()":
+
+                                if each.username != None:
+                                    text = msg.replace("$USERNAME", each.username)
+                                else:
+                                    text = msg.replace("$USERNAME", "")
+                                
+
+                                await self.client.send_message(user.id, text)
+                                print(f"Sent To - {user.first_name}")
+                                await asyncio.sleep(0.5)
+
+                            else:
+                                pass
                         else:
                             pass
+
+            self.update_receivers()
                     
         except Exception as e:
             print(e)
