@@ -200,10 +200,12 @@ class TelegramApi:
                             pass
 
             self.update_receivers()
+            return True
                     
         except Exception as e:
             print(e)
             print("Failed attempt! You inputed invalid data for this script.")
+            self.update_receivers()
             return False
 
     async def text_spambot(self):
