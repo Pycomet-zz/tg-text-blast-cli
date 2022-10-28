@@ -182,7 +182,8 @@ class TelegramApi:
                         for msg in data['message']:
 
                             # Write User Filter In Condition
-                            if each.bot == False and str(each.status) == "UserStatusRecently()":
+                            status = str(each.status).split('(')[0]
+                            if each.bot == False and status in ["UserStatusRecently", "UserStatusOnline"]:
 
                                 if each.username != None:
                                     text = msg.replace("$USERNAME", each.username)
