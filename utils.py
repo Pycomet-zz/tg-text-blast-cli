@@ -45,7 +45,7 @@ class TelegramApi:
         # print(session)
         self.client = TelegramClient(StringSession(session), API_ID, API_HASH, loop=self.loop).start()
         user = self.client.loop.run_until_complete(self.client.get_me())
-        print(f"Signed In As {user.first_name} ({user.id})")
+        print(f"Signed In As {user.first_name} ({user.id}) ({user.phone})")
 
     @property
     def session(self):
@@ -220,18 +220,30 @@ class TelegramApi:
             print("No Messaging")
     
     async def request_handler(self, event):
+        print(event)
         try:
-            sender = event.user_id
+            sender = event.message.peer_id
             message = event.message
             print(f"New Message Alert - {message}")
 
             # if event.out == False and sender in self.receivers:
-            if event.out == False:
-                await self.client.send_message(
-                    sender,
-                    "Please contact @codefred for more details and resources to help you get started."
-                )
-                self.receivers.remove(sender)
+            if event.message.out == False:
+                # import pdb; pdb.set_trace()
+
+                
+                    await self.client.forward_messages(
+                        'crytoexpert',
+                        message.id,
+                        sender
+                    )
+
+
+                
+                # await self.client.send_message(
+                #     sender,
+                #     "Please contact @codefred for more details and resources to help you get started."
+                # )
+                # self.receivers.remove(sender)
             else:
                 pass
         except AttributeError:
